@@ -2049,7 +2049,7 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 	irq = of_irq_get(dev->of_node, 0);
 	ret = devm_request_irq(dev, irq,
 			       qcom_glink_native_intr,
-			       IRQF_NO_SUSPEND | IRQF_SHARED,
+			       IRQF_SHARED,
 			       glink->irqname, glink);
 	if (ret) {
 		dev_err(dev, "failed to request IRQ\n");
@@ -2060,7 +2060,7 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 		if (strcmp(sub_name[i].g_name, glink->name) == 0) {
 			ret = devm_request_irq(dev, irq,
 				qcom_glink_native_intr,
-				IRQF_NO_SUSPEND | IRQF_SHARED,
+				IRQF_SHARED,
 				sub_name[i].s_name, glink);
 			if (ret) {
 				dev_err(dev, "failed to request IRQ\n");
@@ -2071,6 +2071,9 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 	}
 
 	glink->irq = irq;
+	ret = enable_irq_wake(glink->irq);
+	if (ret)
+		dev_err(dev, "failed to set irq wake\n");
 
 	size = of_property_count_u32_elems(dev->of_node, "cpu-affinity");
 	if (size > 0) {
