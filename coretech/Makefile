@@ -29,5 +29,4 @@ obj-$(CONFIG_IM) += im/
 obj-$(CONFIG_AIGOV) += aigov/
 obj-$(CONFIG_UXCHAIN) += uxchain/
 
-obj-$(CONFIG_TPD) += tpd/
 obj-$(CONFIG_PCCORE) += pccore/
