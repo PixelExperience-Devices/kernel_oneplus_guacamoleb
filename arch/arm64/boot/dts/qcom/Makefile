@@ -160,6 +160,12 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sm8150-rumi-overlay.dtbo \
 		sm8150-qrd-overlay.dtbo \
 		sm8150-qrd-dvt-overlay.dtbo \
+		sa8155-adp-star-overlay.dtbo \
+		sa8155p-adp-star-overlay.dtbo \
+		sa8155-v2-adp-air-overlay.dtbo \
+                sa8155p-v2-adp-air-overlay.dtbo \
+		sa8155-adp-alcor-overlay.dtbo \
+		sa8155p-adp-alcor-overlay.dtbo \
 		sm8150-sdx50m-cdp-overlay.dtbo \
 		sm8150-sdx50m-mtp-overlay.dtbo \
 		sm8150-sdx50m-mtp-2.5k-panel-overlay.dtbo \
@@ -179,6 +185,12 @@ sm8150-rumi-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2
 sm8150-qrd-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-hdk-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-qrd-dvt-overlay.dtbo-base := sm8150-v2.dtb sm8150p-v2.dtb
+sa8155-adp-star-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
+sa8155p-adp-star-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
+sa8155-v2-adp-air-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
+sa8155p-v2-adp-air-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
+sa8155-adp-alcor-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
+sa8155p-adp-alcor-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
 sm8150-sdx50m-cdp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-sdx50m-mtp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-sdx50m-mtp-2.5k-panel-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
@@ -352,7 +364,6 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
                 sa6155p-v3-adp-air-overlay.dtbo \
 		qcs610-iot-overlay.dtbo \
 		qcs610-ipc-overlay.dtbo \
-		qcs610-opk-overlay.dtbo \
 		qcs410-iot-overlay.dtbo \
 		qcs410-ipc-overlay.dtbo \
 		prairie-iot-idp-overlay.dtbo \
@@ -379,7 +390,6 @@ sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v3-adp-air-overlay.dtbo-base := sa6155p.dtb
 qcs610-iot-overlay.dtbo-base := qcs610.dtb
 qcs610-ipc-overlay.dtbo-base := qcs610.dtb
-qcs610-opk-overlay.dtbo-base := qcs610.dtb
 qcs410-iot-overlay.dtbo-base := qcs410.dtb
 qcs410-ipc-overlay.dtbo-base := qcs410.dtb
 prairie-iot-idp-overlay.dtbo-base := qcs610.dtb
@@ -406,7 +416,6 @@ dtb-$(CONFIG_ARCH_SM6150)	+= sm6150-rumi.dtb \
         sa6155p-v3-adp-air.dtb \
 	qcs610-iot.dtb \
 	qcs610-ipc.dtb \
-	qcs610-opk.dtb \
 	qcs410-iot.dtb \
 	qcs410-ipc.dtb \
 	prairie-iot-idp.dtb \
@@ -673,8 +682,6 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sdm429-bg-dvt2-wtp-overlay.dtbo\
 		sdm429-spyro-qrd-newport-overlay.dtbo\
 		sdm429-spyro-qrd-newport-v2-overlay.dtbo\
-		sda429-spyro-qrd-newport-overlay.dtbo\
-		sda429-spyro-qrd-newport-v2-overlay.dtbo\
 		sda429-wdp-overlay.dtbo\
 		sda429-wtp-overlay.dtbo\
 		sda429-bg-dvt2-wtp-overlay.dtbo
@@ -684,8 +691,6 @@ sdm429-wdp-overlay.dtbo-base := sdm429.dtb
 sdm429-bg-dvt2-wtp-overlay.dtbo-base := sdm429.dtb
 sdm429-spyro-qrd-newport-overlay.dtbo-base := sdm429-spyro.dtb
 sdm429-spyro-qrd-newport-v2-overlay.dtbo-base := sdm429-spyro-qrd-newport-v2.dtb
-sda429-spyro-qrd-newport-overlay.dtbo-base := sda429-spyro.dtb
-sda429-spyro-qrd-newport-v2-overlay.dtbo-base := sda429-spyro-qrd-newport-v2.dtb
 sda429-wtp-overlay.dtbo-base := sda429.dtb
 sda429-wdp-overlay.dtbo-base := sda429.dtb
 sda429-bg-dvt2-wtp-overlay.dtbo-base := sda429.dtb

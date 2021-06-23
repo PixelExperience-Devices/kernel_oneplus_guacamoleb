@@ -306,7 +306,7 @@
 		pinctrl-0 = <&sensor_int1_default>,<&sensor_enable_default>;
 		asm330-enable-gpio = <&tlmm 87 0x1>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <84 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <84 IRQ_TYPE_LEVEL_HIGH>;
 		st,drdy-int-pin= <2>;
 		qcom,regulator_check = <0>; /* 0:Disable 1:Enable */
 		qcom,asm330_hrtimer;
@@ -319,7 +319,7 @@
 		pinctrl-0 = <&sensor_int1_default>,<&sensor_enable_default>;
 		asm330-enable-gpio = <&tlmm 87 0x1>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <84 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <84 IRQ_TYPE_LEVEL_HIGH>;
 		st,int-pin= <2>;
 		qcom,regulator_check = <0>; /* 0:Disable 1:Enable */
 		qcom,asm330_hrtimer;
@@ -344,9 +344,6 @@
 	qcom,phy-reset-delay-msecs = <10>;
 	ipa-dma-rx-desc-cnt = <512>;
 	ipa-dma-tx-desc-cnt = <512>;
-	rgmii-tx-drv-str-clk = <16>;
-	rgmii-tx-drv-str-data = <16>;
-	rgmii-tx-drv-str-ctl = <16>;
 };
 
 &vreg_rgmii_io_pads {
@@ -455,7 +452,6 @@
 			mhi,max-channels = <30>;
 			mhi,buffer-len = <0x8000>;
 			mhi,timeout = <10000>;
-			mhi,m2-no-db-access = <1>;
 			qcom,smmu-s1-enable;
 			mhi_channels {
 				#address-cells = <1>;
@@ -567,7 +563,6 @@
 			mhi,max-channels = <30>;
 			mhi,buffer-len = <0x8000>;
 			mhi,timeout = <10000>;
-			mhi,m2-no-db-access = <1>;
 			mhi,ee = <0x3>, <0x4>;
 			mhi,ee-names = "SBL", "RDDM";
 			mhi,bhie-offset = <0x0324>;
