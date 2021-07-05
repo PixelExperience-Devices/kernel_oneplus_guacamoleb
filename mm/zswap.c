@@ -475,7 +475,7 @@ static struct zswap_pool *zswap_pool_create(char *type, char *compressor)
 	zswap_pool = pool->zpool;
 	pr_debug("using %s zpool\n", zpool_get_type(pool->zpool));
 
-	strlcpy(pool->tfm_name, compressor, sizeof(pool->tfm_name));
+	strscpy(pool->tfm_name, compressor, sizeof(pool->tfm_name));
 	pool->tfm = alloc_percpu(struct crypto_comp *);
 	if (!pool->tfm) {
 		pr_err("percpu alloc failed\n");
@@ -844,7 +844,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 		goto put_dstmem;
 	}
 
-	buf = (u8 *)zpool_map_handle(entry->pool->zpool, handle, ZPOOL_MM_RW);
+	buf = (u8 *)zpool_map_handle(entry->pool->zpool, handle, ZPOOL_MM_WO);
 	if (dlen == PAGE_SIZE) {
 		src = kmap_atomic(page);
 		copy_page(buf, src);
