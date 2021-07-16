@@ -142,6 +142,7 @@ struct qcom_glink {
 	struct qcom_glink_pipe *tx_pipe;
 
 	int irq;
+	char irqname[GLINK_NAME_SIZE];
 
 	struct kthread_worker kworker;
 	struct task_struct *task;
@@ -1985,8 +1986,6 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 					   bool intentless)
 {
 	struct qcom_glink *glink;
-	unsigned long irqflags;
-	bool vm_support;
 	u32 *arr;
 	int size;
 	int irq;
@@ -2045,20 +2044,23 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 	if (ret)
 		dev_err(dev, "failed to register early notif %d\n", ret);
 
-	irq = of_irq_get(dev->of_node, 0);
+	snprintf(glink->irqname, 32, "glink-native-%s", glink->name);
 
-	/* Use different irq flag option in case of gvm */
-	vm_support = of_property_read_bool(dev->of_node, "vm-support");
-	if (vm_support)
-		irqflags = IRQF_TRIGGER_RISING;
-	else
-		irqflags = IRQF_NO_SUSPEND | IRQF_SHARED;
+	irq = of_irq_get(dev->of_node, 0);
+	ret = devm_request_irq(dev, irq,
+			       qcom_glink_native_intr,
+			       IRQF_SHARED,
+			       glink->irqname, glink);
+	if (ret) {
+		dev_err(dev, "failed to request IRQ\n");
+		goto unregister;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(sub_name); i++) {
 		if (strcmp(sub_name[i].g_name, glink->name) == 0) {
 			ret = devm_request_irq(dev, irq,
 				qcom_glink_native_intr,
-				irqflags,
+				IRQF_SHARED,
 				sub_name[i].s_name, glink);
 			if (ret) {
 				dev_err(dev, "failed to request IRQ\n");
@@ -2069,10 +2071,9 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 	}
 
 	glink->irq = irq;
-
-	ret = enable_irq_wake(irq);
-	if (ret < 0)
-		dev_err(dev, "enable_irq_wake() failed on %d\n", irq);
+	ret = enable_irq_wake(glink->irq);
+	if (ret)
+		dev_err(dev, "failed to set irq wake\n");
 
 	size = of_property_count_u32_elems(dev->of_node, "cpu-affinity");
 	if (size > 0) {
