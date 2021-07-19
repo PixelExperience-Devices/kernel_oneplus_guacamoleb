@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -893,7 +893,7 @@ static ssize_t measured_fps_show(struct device *device,
 	fps_int = (uint64_t) sde_crtc->fps_info.measured_fps;
 	fps_decimal = do_div(fps_int, 10);
 	return scnprintf(buf, PAGE_SIZE,
-	"fps: %llu.%llu duration:%d frame_count:%llu\n", fps_int, fps_decimal,
+	"fps: %d.%d duration:%d frame_count:%llu\n", fps_int, fps_decimal,
 			sde_crtc->fps_info.fps_periodic_duration, frame_count);
 }
 
@@ -3145,16 +3145,15 @@ static void _sde_crtc_set_input_fence_timeout(struct sde_crtc_state *cstate)
 	cstate->input_fence_timeout_ns *= NSEC_PER_MSEC;
 }
 
-/**
- * _sde_crtc_clear_dim_layers_v1 - clear all dim layer settings
- * @cstate:      Pointer to sde crtc state
- */
-static void _sde_crtc_clear_dim_layers_v1(struct sde_crtc_state *cstate)
+void _sde_crtc_clear_dim_layers_v1(struct drm_crtc_state *state)
 {
 	u32 i;
+	struct sde_crtc_state *cstate;
 
-	if (!cstate)
+	if (!state)
 		return;
+
+	cstate = to_sde_crtc_state(state);
 
 	for (i = 0; i < cstate->num_dim_layers; i++)
 		memset(&cstate->dim_layer[i], 0, sizeof(cstate->dim_layer[i]));
@@ -3191,7 +3190,7 @@ static void _sde_crtc_set_dim_layer_v1(struct drm_crtc *crtc,
 
 	if (!usr_ptr) {
 		/* usr_ptr is null when setting the default property value */
-		_sde_crtc_clear_dim_layers_v1(cstate);
+		_sde_crtc_clear_dim_layers_v1(&cstate->base);
 		SDE_DEBUG("dim_layer data removed\n");
 		return;
 	}
@@ -3354,7 +3353,7 @@ struct ba brightness_alpha_lut_dc[] = {
 
 static u32 *alpha_gen, *alpha_gen_dc;
 
-static inline int interpolate(int x, int xa, int xb, int ya, int yb)
+static int interpolate(int x, int xa, int xb, int ya, int yb)
 {
 	int bf, factor, plus;
 	int sub = 0;
@@ -3464,12 +3463,14 @@ int oneplus_get_panel_brightness_to_alpha(void)
 	if (is_stock) {
 		if (display->panel->dim_status)
 			return brightness_to_alpha(display->panel->hbm_backlight);
+		else
+			return bl_to_alpha_dc(display->panel->hbm_backlight);
 	} else {
 		if (oneplus_dimlayer_hbm_enable)
 			return brightness_to_alpha(display->panel->hbm_backlight);
+		else
+			return bl_to_alpha_dc(display->panel->hbm_backlight);
 	}
-
-	return bl_to_alpha_dc(display->panel->hbm_backlight);
 }
 
 int oneplus_onscreenaod_hid = 0;
@@ -4281,6 +4282,9 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 		sde_encoder_trigger_kickoff_pending(encoder);
 	}
 
+	 /* update performance setting */
+		sde_core_perf_crtc_update(crtc, 1, false);
+
 	/*
 	 * If no mixers have been allocated in sde_crtc_atomic_check(),
 	 * it means we are trying to flush a CRTC whose state is disabled:
@@ -4426,9 +4430,6 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 		}
 		cstate->rsc_update = true;
 	}
-
-	/* update performance setting before crtc kickoff */
-	sde_core_perf_crtc_update(crtc, 1, false);
 
 	/*
 	 * Final plane updates: Give each plane a chance to complete all
@@ -5851,7 +5852,10 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			aod_index = i;
 	}
 
-	display->panel->dim_status = fp_index >= 0 && dim_mode != 0;
+	if (fp_index >=0 && dim_mode!=0)
+		display->panel->dim_status = true;
+	else
+		display->panel->dim_status = false;
 
 	if (aod_index < 0) {
 		oneplus_aod_hid = 0;
@@ -5878,34 +5882,37 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		(display->panel->aod_status == 1 &&
 		oneplus_aod_dc == 0)) {
 		op_dimlayer_bl = 0;
-	} else if (op_dimlayer_bl_enable && !op_dp_enable) {
-		if (display->panel->bl_config.bl_level != 0 &&
-			display->panel->bl_config.bl_level < op_dimlayer_bl_alpha) {
-			dim_backlight = 1;
-			op_dimlayer_bl = 1;
-			if (mode_fps == 60 && dsi_panel_hw_type == DSI_PANEL_SAMSUNG_S6E3HC2)
-				dim_backlight_pre = 1;
+	} else {
+		if (op_dimlayer_bl_enable && !op_dp_enable) {
+			if (display->panel->bl_config.bl_level != 0 &&
+				display->panel->bl_config.bl_level < op_dimlayer_bl_alpha) {
+				dim_backlight = 1;
+				op_dimlayer_bl = 1;
+				if (mode_fps == 60 && dsi_panel_hw_type == DSI_PANEL_SAMSUNG_S6E3HC2)
+					dim_backlight_pre = 1;
+			} else {
+				op_dimlayer_bl = 0;
+			}
 		} else {
 			op_dimlayer_bl = 0;
-		}
-	} else {
-		op_dimlayer_bl = 0;
-		if (dim_backlight_pre) {
-			if (mode_fps == 60 && dsi_panel_hw_type == DSI_PANEL_SAMSUNG_S6E3HC2)
-				dim_backlight = 1;
+			if (dim_backlight_pre) {
+				if (mode_fps == 60 && dsi_panel_hw_type == DSI_PANEL_SAMSUNG_S6E3HC2)
+					dim_backlight = 1;
 
-			dim_backlight_pre = 0;
-			SDE_ERROR("show dl one more frame %d\n", dsi_panel_hw_type);
+				dim_backlight_pre = 0;
+				SDE_ERROR("show dl one more frame %d\n", dsi_panel_hw_type);
+			}
 		}
     }
 	SDE_DEBUG("fp_index=%d,fppressed_index=%d,aod_index=%d\n", fp_index, fppressed_index, aod_index);
 
 	if (is_stock) {
 		if (fp_index >= 0 || fppressed_index >= 0 || oneplus_force_screenfp || dim_backlight == 1) {
-			if (fp_index >= 0 && fppressed_index >= 0 &&
-				pstates[fp_index].stage >= pstates[fppressed_index].stage) {
-				SDE_ERROR("Bug!!@@@@: fp layer top of fppressed layer\n");
-				return -EINVAL;
+			if (fp_index >= 0 && fppressed_index >= 0) {
+				if (pstates[fp_index].stage >= pstates[fppressed_index].stage) {
+					SDE_ERROR("Bug!!@@@@: fp layer top of fppressed layer\n");
+					return -EINVAL;
+				}
 			}
 
 			if (fppressed_index >= 0) {
@@ -5939,9 +5946,11 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 				zpos++;
 			}
 
-			if (fp_index >= 0 && dim_mode == 0) {
-				// pstates[fp_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
-				fp_index = -1;
+			if (fp_index >= 0) {
+				if (dim_mode == 0) {
+					//pstates[fp_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
+					fp_index = -1;
+				}
 			}
         	if (fppressed_index >= 0) {
 				if (fp_mode == 0) {
@@ -5949,9 +5958,9 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 					if (oneplus_aod_fod == 1 && aod_index < 0) {
 						SDE_DEBUG("set reset pstate\n");
 						for (i = 0; i < cnt; i++) {
-							if (i != fppressed_index &&
-								pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value == 0){
-								pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
+							if (i != fppressed_index ) {
+								if (pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value == 0)
+									pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
 							}
 						}
 					}
@@ -5960,12 +5969,14 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 					pstates[fppressed_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0xff;
 			}
 
-			if (aod_index >= 0 && aod_mode == 1) {
+			if (aod_index >= 0) {
+				if (aod_mode == 1) {
 					SDE_DEBUG("aod layer hid");
 					SDE_ATRACE_BEGIN("aod_layer_hid");
 					pstates[aod_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
 					aod_index = -1;
 					SDE_ATRACE_END("aod_layer_hid");
+				}
 			}
 		
 			if (fp_index >= 0)
@@ -5986,19 +5997,16 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		} else {
 			cstate->fingerprint_pressed = false;
 			cstate->fingerprint_mode = false;
-			for (i = 0; i < cnt; i++) {
-				if (pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value == 0)
-					SDE_DEBUG("pstates PLANE_PROP_ALPHA value is 0\n");
-			}
     	}
 		if (fp_index < 0 && !dim_backlight)
 			cstate->fingerprint_dim_layer = NULL;
 	} else {
 		if (oneplus_dimlayer_hbm_enable || oneplus_force_screenfp || dim_backlight == 1) {
-			if (fp_index >= 0 && fppressed_index >= 0 &&
-				pstates[fp_index].stage >= pstates[fppressed_index].stage) {
-				SDE_ERROR("Bug!!@@@@: fp layer top of fppressed layer\n");
-				return -EINVAL;
+			if (fp_index >= 0 && fppressed_index >= 0) {
+				if (pstates[fp_index].stage >= pstates[fppressed_index].stage) {
+					SDE_ERROR("Bug!!@@@@: fp layer top of fppressed layer\n");
+					return -EINVAL;
+				}
 			}
 
 			if (fppressed_index >= 0) {
@@ -6052,16 +6060,11 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		} else {
 				cstate->fingerprint_dim_layer = NULL;
 				cstate->fingerprint_pressed = false;
-			cstate->fingerprint_mode = false;
-			for (i = 0; i < cnt; i++) {
-				if (pstates[i].sde_pstate->property_values[PLANE_PROP_ALPHA].value == 0)
-					SDE_DEBUG("pstates PLANE_PROP_ALPHA value is 0\n");
-			}
+				cstate->fingerprint_mode = false;
     	}
 		if (fp_mode == 1 && !oneplus_dimlayer_hbm_enable) {
 			cstate->fingerprint_mode = true;
 			cstate->fingerprint_pressed = true;
-			return 0;
 		}
 	}
 
@@ -6822,7 +6825,7 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	int idx, ret;
 	uint64_t fence_fd;
 
-	if (unlikely(!crtc || !state || !property)) {
+	if (!crtc || !state || !property) {
 		SDE_ERROR("invalid argument(s)\n");
 		return -EINVAL;
 	}
@@ -6833,13 +6836,13 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	SDE_ATRACE_BEGIN("sde_crtc_atomic_set_property");
 	/* check with cp property system first */
 	ret = sde_cp_crtc_set_property(crtc, property, val);
-	if (unlikely(ret != -ENOENT))
+	if (ret != -ENOENT)
 		goto exit;
 
 	/* if not handled by cp, check msm_property system */
 	ret = msm_property_atomic_set(&sde_crtc->property_info,
 			&cstate->property_state, property, val);
-	if (unlikely(ret))
+	if (ret)
 		goto exit;
 
 	idx = msm_property_index(&sde_crtc->property_info, property);
@@ -6877,18 +6880,18 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 		cstate->bw_split_vote = true;
 		break;
 	case CRTC_PROP_OUTPUT_FENCE:
-		if (unlikely(!val))
+		if (!val)
 			goto exit;
 
 		ret = _sde_crtc_get_output_fence(crtc, state, &fence_fd);
-		if (unlikely(ret)) {
+		if (ret) {
 			SDE_ERROR("fence create failed rc:%d\n", ret);
 			goto exit;
 		}
 
 		ret = copy_to_user((uint64_t __user *)(uintptr_t)val, &fence_fd,
 				sizeof(uint64_t));
-		if (unlikely(ret)) {
+		if (ret) {
 			SDE_ERROR("copy to user failed rc:%d\n", ret);
 			put_unused_fd(fence_fd);
 			ret = -EFAULT;
