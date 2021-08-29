@@ -61,8 +61,9 @@
 #define MSM_VERSION_MINOR	2
 #define MSM_VERSION_PATCHLEVEL	0
 
-static struct kmem_cache *kmem_vblank_work_pool;
 static DEFINE_MUTEX(msm_release_lock);
+
+static struct kmem_cache *kmem_vblank_work_pool;
 
 static void msm_fb_output_poll_changed(struct drm_device *dev)
 {
