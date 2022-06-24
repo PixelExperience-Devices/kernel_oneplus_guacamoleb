@@ -4425,15 +4425,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		else
 			pval->intval = -1;
 		break;
-	case POWER_SUPPLY_PROP_BATTERY_HEALTH:
-		if (fg->use_external_fg && external_fg
-				&& external_fg->get_batt_health)
-			pval->intval = external_fg->get_batt_health();
-		else if (get_extern_fg_regist_done() == false)
-			pval->intval = -1;
-		else
-			pval->intval = -1;
-		break;
 	case POWER_SUPPLY_PROP_RESISTANCE:
 		rc = fg_get_battery_resistance(fg, &pval->intval);
 		break;
