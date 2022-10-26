@@ -138,7 +138,8 @@ int ol_peer_recovery_notifier_cb(struct notifier_block *block,
 	if (!peer)
 		return -EINVAL;
 
-	if (notif_data->offset >= QDF_WLAN_MAX_HOST_OFFSET)
+	if (notif_data->offset + sizeof(struct peer_hang_data) >
+			QDF_WLAN_HANG_FW_OFFSET)
 		return NOTIFY_STOP_MASK;
 
 	QDF_HANG_EVT_SET_HDR(&hang_data.tlv_header,
@@ -5891,6 +5892,9 @@ static uint32_t ol_txrx_get_cfg(struct cdp_soc_t *soc_hdl, enum cdp_dp_cfg cfg)
 		break;
 	case cfg_dp_lro_enable:
 		value = cfg_ctx->lro_enable;
+		break;
+	case cfg_dp_sg_enable:
+		value = cfg_ctx->sg_enable;
 		break;
 	case cfg_dp_gro_enable:
 		value = cfg_ctx->gro_enable;
