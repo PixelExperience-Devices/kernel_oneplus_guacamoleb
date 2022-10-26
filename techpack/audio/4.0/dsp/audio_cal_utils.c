@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/slab.h>
 #include <linux/fs.h>
@@ -1085,12 +1085,12 @@ bool cal_utils_is_cal_stale(struct cal_block_data *cal_block)
 		pr_err("%s: cal_block is Null", __func__);
 		goto unlock;
 	}
+
 	if (cal_block->cal_stale)
-	    ret = true;
+		ret = true;
 
 unlock:
 	mutex_unlock(&cal_lock);
 	return ret;
-
 }
 EXPORT_SYMBOL(cal_utils_is_cal_stale);
