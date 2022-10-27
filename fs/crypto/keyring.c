@@ -620,6 +620,7 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
 		return -EINVAL;
 
 	memset(&secret, 0, sizeof(secret));
+
 	if (arg.key_id) {
 		if (arg.raw_size != 0)
 			return -EINVAL;
