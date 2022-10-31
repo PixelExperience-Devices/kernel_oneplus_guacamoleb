@@ -21,7 +21,7 @@
 #include <crypto/skcipher.h>
 #include <linux/key-type.h>
 #include <linux/seq_file.h>
-
+#include <linux/random.h>
 #include "fscrypt_private.h"
 
 static void wipe_master_key_secret(struct fscrypt_master_key_secret *secret)
@@ -738,6 +738,29 @@ out_wipe_secret:
 	return err;
 }
 EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
+
+/*
+ * Add the key for '-o test_dummy_encryption' to the filesystem keyring.
+ *
+ * Use a per-boot random key to prevent people from misusing this option.
+ */
+int fscrypt_add_test_dummy_key(struct super_block *sb,
+			       struct fscrypt_key_specifier *key_spec)
+{
+	static u8 test_key[FSCRYPT_MAX_KEY_SIZE];
+	struct fscrypt_master_key_secret secret;
+	int err;
+
+	get_random_once(test_key, FSCRYPT_MAX_KEY_SIZE);
+
+	memset(&secret, 0, sizeof(secret));
+	secret.size = FSCRYPT_MAX_KEY_SIZE;
+	memcpy(secret.raw, test_key, FSCRYPT_MAX_KEY_SIZE);
+
+	err = add_master_key(sb, &secret, key_spec);
+	wipe_master_key_secret(&secret);
+	return err;
+}
 
 /*
  * Verify that the current user has added a master key with the given identifier
