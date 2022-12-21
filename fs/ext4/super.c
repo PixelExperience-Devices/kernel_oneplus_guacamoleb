@@ -84,10 +84,6 @@ static void ext4_unregister_li_request(struct super_block *sb);
 static void ext4_clear_request_list(void);
 static struct inode *ext4_get_journal_inode(struct super_block *sb,
 					    unsigned int journal_inum);
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-static void ext4_umount_begin(struct super_block *sb);
-extern void ext4_stop_discard_thread(struct ext4_sb_info *sbi);
-#endif
 
 /*
  * Lock ordering
@@ -911,9 +907,7 @@ static void ext4_put_super(struct super_block *sb)
 	struct flex_groups **flex_groups;
 	int aborted = 0;
 	int i, err;
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	destroy_discard_cmd_control(sbi);
-#endif
+
 	ext4_unregister_li_request(sb);
 	ext4_quota_off_umount(sb);
 
@@ -1392,9 +1386,6 @@ static const struct super_operations ext4_sops = {
 	.statfs		= ext4_statfs,
 	.umount_end	= ext4_umount_end,
 	.remount_fs	= ext4_remount,
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	.umount_begin   = ext4_umount_begin,
-#endif
 	.show_options	= ext4_show_options,
 #ifdef CONFIG_QUOTA
 	.quota_read	= ext4_quota_read,
@@ -1431,9 +1422,6 @@ enum {
 	Opt_nomblk_io_submit, Opt_block_validity, Opt_noblock_validity,
 	Opt_inode_readahead_blks, Opt_journal_ioprio,
 	Opt_dioread_nolock, Opt_dioread_lock,
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	Opt_async_discard, Opt_noasync_discard,
-#endif
 	Opt_discard, Opt_nodiscard, Opt_init_itable, Opt_noinit_itable,
 	Opt_max_dir_size_kb, Opt_nojournal_checksum, Opt_nombcache,
 };
@@ -1513,10 +1501,6 @@ static const match_table_t tokens = {
 	{Opt_dioread_lock, "dioread_lock"},
 	{Opt_discard, "discard"},
 	{Opt_nodiscard, "nodiscard"},
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	{Opt_async_discard, "async_discard"},
-	{Opt_noasync_discard, "noasync_discard"},
-#endif
 	{Opt_init_itable, "init_itable=%u"},
 	{Opt_init_itable, "init_itable"},
 	{Opt_noinit_itable, "noinit_itable"},
@@ -1660,10 +1644,6 @@ static const struct mount_opts {
 	 MOPT_EXT4_ONLY | MOPT_SET},
 	{Opt_dioread_lock, EXT4_MOUNT_DIOREAD_NOLOCK,
 	 MOPT_EXT4_ONLY | MOPT_CLEAR},
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	{Opt_async_discard, EXT4_MOUNT_ASYNC_DISCARD, MOPT_SET},
-	{Opt_noasync_discard, EXT4_MOUNT_ASYNC_DISCARD, MOPT_CLEAR},
-#endif
 	{Opt_discard, EXT4_MOUNT_DISCARD, MOPT_SET},
 	{Opt_nodiscard, EXT4_MOUNT_DISCARD, MOPT_CLEAR},
 	{Opt_delalloc, EXT4_MOUNT_DELALLOC,
@@ -3938,12 +3918,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	}
 #endif
 
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	if (test_opt(sb, ASYNC_DISCARD) && test_opt(sb,DISCARD)) {
-		clear_opt(sb, DISCARD);
-		ext4_msg(sb, KERN_WARNING, "mount option discard/async_discard conflict, use async_discard default");
-	}
-#endif
 	if (test_opt(sb, DATA_FLAGS) == EXT4_MOUNT_JOURNAL_DATA) {
 		printk_once(KERN_WARNING "EXT4-fs: Warning: mounting "
 			    "with data=journal disables delayed "
@@ -4667,11 +4641,7 @@ no_journal:
 	} else
 		descr = "out journal";
 
-	if (test_opt(sb, DISCARD)
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-		|| test_opt(sb, ASYNC_DISCARD)
-#endif
-	) {
+	if (test_opt(sb, DISCARD)) {
 		struct request_queue *q = bdev_get_queue(sb->s_bdev);
 		if (!blk_queue_discard(q))
 			ext4_msg(sb, KERN_WARNING,
@@ -4695,15 +4665,6 @@ no_journal:
 	ratelimit_state_init(&sbi->s_msg_ratelimit_state, 5 * HZ, 10);
 
 	kfree(orig_data);
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-	if (test_opt(sb, ASYNC_DISCARD)) {
-		sbi->interval_time = DEF_IDLE_INTERVAL;
-		err = create_discard_cmd_control(sbi);
-		if (err)
-			ext4_msg(sb, KERN_ERR, "mount creat async discard thread fail");
-    }
-	ext4_update_time(sbi);
-#endif
 	return 0;
 
 cantfind_ext4:
@@ -5354,22 +5315,6 @@ struct ext4_mount_options {
 	char *s_qf_names[EXT4_MAXQUOTAS];
 #endif
 };
-
-#if defined(CONFIG_OPLUS_FEATURE_EXT4_ASYNC_DISCARD)
-static void ext4_umount_begin(struct super_block *sb)
-{
-	/*
-	 * this is called at the begin of umount to stop discard thread
-	 */
-
-	if(test_opt(sb, ASYNC_DISCARD))
-	{
-		ext4_msg(sb, KERN_WARNING, "stopping discard thread...");
-		ext4_stop_discard_thread(EXT4_SB(sb));
-	}
-
-}
-#endif
 
 static void ext4_umount_end(struct super_block *sb, int flags)
 {

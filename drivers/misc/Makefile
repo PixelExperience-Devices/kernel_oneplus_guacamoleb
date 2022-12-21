@@ -71,21 +71,10 @@ obj-$(CONFIG_QPNP_MISC) 	+= qpnp-misc.o
 obj-$(CONFIG_OKL4_USER_VIRQ)	+= okl4-virq.o
 obj-$(CONFIG_OKL4_RINGBUF)	+= okl4-ringbuf.o
 obj-$(CONFIG_TEST_IRQ_REQUESTER) += irq_requester.o
-
-#ifdef OPLUS_FEATURE_TP_BASIC
-obj-$(CONFIG_OPLUS_RF_CABLE_MONITOR)	+= oplus_rf_cable_monitor.o
-obj-$(CONFIG_OPLUS_RF_CABLE_MONITOR)	+= op_ant_detect.o
-#endif
-
 #ifdef OPLUS_FEATURE_CHG_BASIC
 obj-y               += motor.o
 obj-y               += oplus_motor/
 #endif
-
-#ifdef OPLUS_FEATURE_TP_BASIC
-obj-$(CONFIG_SIM_DETECT)	+= sim_detect.o
-#endif
-
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_heap.o
@@ -107,6 +96,4 @@ $(obj)/lkdtm_rodata_objcopy.o: $(obj)/lkdtm_rodata.o FORCE
 obj-$(CONFIG_OKL4_USER_VIPC)    += okl4-vipc.o
 obj-$(CONFIG_OKL4_GUEST)        += okl4-panic.o
 obj-$(CONFIG_OKL4_LINK_SHBUF)    += okl4-link-shbuf.o
-#ifdef OPLUS_FEATURE_MM_ULTRASOUND
 obj-$(CONFIG_AUDIO_SENSOR) += audio_sensor.o
-#endif

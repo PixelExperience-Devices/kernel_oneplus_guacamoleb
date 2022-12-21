@@ -64,6 +64,7 @@ reject_tg(struct sk_buff *skb, const struct xt_action_param *par)
 		/* Doesn't happen. */
 		break;
 	}
+
 	return NF_DROP;
 }
 

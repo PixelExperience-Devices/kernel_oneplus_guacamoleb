@@ -25,20 +25,6 @@ obj-$(CONFIG_PLAT_VERSATILE)	+= versatile/
 obj-$(CONFIG_ARCH_ZX)		+= zte/
 obj-y                           += oplus/
 
-#ifdef OPLUS_FEATURE_IOMONITOR
-obj-$(CONFIG_IOMONITOR)    +=  oplus/iomonitor/
-#endif /*OPLUS_FEATURE_IOMONITOR*/
-
-#ifdef VENDOR_EDIT
-obj-y				+= oplus/
-#endif
-#ifdef OPLUS_FEATURE_POWERINFO_STANDBY
-obj-$(CONFIG_OPLUS_WAKELOCK_PROFILER) += oplus/owakelock/
-#endif /* OPLUS_FEATURE_POWERINFO_STANDBY */
-#ifdef OPLUS_FEATURE_HEALTHINFO
-obj-y     +=  oplus/oplus_healthinfo/
-#endif /* OPLUS_FEATURE_HEALTHINFO */
-
 #ifdef OPLUS_FEATURE_SENSOR_SMEM
 obj-y                     += oplus/sensor/
 #endif
@@ -46,10 +32,3 @@ obj-y                     += oplus/sensor/
 #ifdef OPLUS_FEATURE_SENSOR_SMEM
 obj-$(CONFIG_HORAE_THERMAL_SHELL) += oplus/thermal/
 #endif /* OPLUS_FEATURE_SENSOR_SMEM */
-
-#ifdef OPLUS_FEATURE_RT_INFO
-obj-$(CONFIG_OPLUS_FEATURE_RT_INFO) += oplus/rt_info/
-#endif
-
-#Add for NandSwap
-obj-$(CONFIG_NANDSWAP)		+= oplus/oplus_nandswap/

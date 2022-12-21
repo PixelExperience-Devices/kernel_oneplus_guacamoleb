@@ -49,9 +49,6 @@ obj-y += printk/
 obj-y += irq/
 obj-y += rcu/
 obj-y += livepatch/
-#ifdef CONFIG_OPLUS_SECURE_GUARD
-obj-y += keventupload/
-#endif /* CONFIG_OPLUS_SECURE_GUARD */
 
 obj-$(CONFIG_CHECKPOINT_RESTORE) += kcmp.o
 obj-$(CONFIG_FREEZER) += freezer.o
@@ -122,14 +119,6 @@ obj-$(CONFIG_CONTEXT_TRACKING) += context_tracking.o
 obj-$(CONFIG_TORTURE_TEST) += torture.o
 
 obj-$(CONFIG_HAS_IOMEM) += memremap.o
-
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-obj-y += sched_assist/
-#endif /* OPLUS_FEATURE_SCHED_ASSIST */
-
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-obj-y += special_opt/
-#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 $(obj)/configs.o: $(obj)/config_data.h
 

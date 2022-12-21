@@ -17,21 +17,5 @@ config OPLUS_DEVICE_IFNO
   help
 	define this config to compile devinfo.c for device register
 
-source "drivers/soc/oplus/project_info/Kconfig"
-source "drivers/soc/oplus/device_info/Kconfig"
-
-#ifdef OPLUS_ARCH_EXTENDS
-source "drivers/soc/oplus/oplus_kevent_feedback/Kconfig"
-#endif /* OPLUS_ARCH_EXTENDS */
-
 source "drivers/soc/oplus/system/Kconfig"
 #endif /* VENDOR_EDIT */
-
-#ifdef OPLUS_FEATURE_LOWMEM_DBG
-source "drivers/soc/oplus/lowmem_dbg/Kconfig"
-##endif /* OPLUS_FEATURE_LOWMEM_DBG */
-
-#ifdef OPLUS_FEATURE_MEMLEAK_DETECT
-#Add for svelte
-source "drivers/soc/oplus/svelte/Kconfig"
-#endif /* OPLUS_FEATURE_MEMLEAK_DETECT */

@@ -68,10 +68,6 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
-#if defined(OPLUS_FEATURE_VIRTUAL_RESERVE_MEMORY) && defined(CONFIG_VIRTUAL_RESERVE_MEMORY)
-#include <linux/reserve_area.h>
-#endif
-
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
 	nr_threads--;
@@ -551,9 +547,6 @@ static void exit_mm(void)
 	task_unlock(current);
 	mm_update_next_owner(mm);
 
-#if defined(OPLUS_FEATURE_VIRTUAL_RESERVE_MEMORY) && defined(CONFIG_OPLUS_HEALTHINFO) && defined(CONFIG_VIRTUAL_RESERVE_MEMORY)
-	trigger_svm_oom_event(mm, 0, 0);
-#endif
 	mm_released = mmput(mm);
 	if (test_thread_flag(TIF_MEMDIE))
 		exit_oom_victim();
@@ -789,9 +782,6 @@ void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
-	/* add for init crash problem, bugid:751520, debug code from 7250Q */
-	if ((tsk->pid == 1) && (code != 0)) 
-		panic("[1]init do_exit !!!");
 
 	/*
 	 * We can get here from a kernel oops, sometimes with preemption off.

@@ -1,1 +1,0 @@
-obj-$(CONFIG_OPLUS_COMMON_SOFT)	+=  oplus_project.o boot_mode.o

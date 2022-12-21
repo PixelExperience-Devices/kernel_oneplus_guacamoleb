@@ -735,101 +735,7 @@ early_param("nospectre_v1", nospectre_v1_cmdline);
 static enum spectre_v2_mitigation spectre_v2_enabled __ro_after_init =
 	SPECTRE_V2_NONE;
 
-#undef pr_fmt
-#define pr_fmt(fmt)     "RETBleed: " fmt
-
-enum retbleed_mitigation {
-	RETBLEED_MITIGATION_NONE,
-	RETBLEED_MITIGATION_IBRS,
-	RETBLEED_MITIGATION_EIBRS,
-};
-
-enum retbleed_mitigation_cmd {
-	RETBLEED_CMD_OFF,
-	RETBLEED_CMD_AUTO
-};
-
-const char * const retbleed_strings[] = {
-	[RETBLEED_MITIGATION_NONE]	= "Vulnerable",
-	[RETBLEED_MITIGATION_IBRS]	= "Mitigation: IBRS",
-	[RETBLEED_MITIGATION_EIBRS]	= "Mitigation: Enhanced IBRS",
-};
-
-static enum retbleed_mitigation retbleed_mitigation __ro_after_init =
-	RETBLEED_MITIGATION_NONE;
-static enum retbleed_mitigation_cmd retbleed_cmd __ro_after_init =
-	RETBLEED_CMD_AUTO;
-
-static int __init retbleed_parse_cmdline(char *str)
-{
-	if (!str)
-		return -EINVAL;
-
-	if (!strcmp(str, "off"))
-		retbleed_cmd = RETBLEED_CMD_OFF;
-	else if (!strcmp(str, "auto"))
-		retbleed_cmd = RETBLEED_CMD_AUTO;
-	else
-		pr_err("Unknown retbleed option (%s). Defaulting to 'auto'\n", str);
-
-	return 0;
-}
-early_param("retbleed", retbleed_parse_cmdline);
-
-#define RETBLEED_INTEL_MSG "WARNING: Spectre v2 mitigation leaves CPU vulnerable to RETBleed attacks, data leaks possible!\n"
-
-static void __init retbleed_select_mitigation(void)
-{
-	if (!boot_cpu_has_bug(X86_BUG_RETBLEED) || cpu_mitigations_off())
-		return;
-
-	switch (retbleed_cmd) {
-	case RETBLEED_CMD_OFF:
-		return;
-
-	case RETBLEED_CMD_AUTO:
-	default:
-		/*
-		 * The Intel mitigation (IBRS) was already selected in
-		 * spectre_v2_select_mitigation().
-		 */
-
-		break;
-	}
-
-	switch (retbleed_mitigation) {
-	default:
-		break;
-	}
-
-	/*
-	 * Let IBRS trump all on Intel without affecting the effects of the
-	 * retbleed= cmdline option.
-	 */
-	if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL) {
-		switch (spectre_v2_enabled) {
-		case SPECTRE_V2_IBRS:
-			retbleed_mitigation = RETBLEED_MITIGATION_IBRS;
-			break;
-		case SPECTRE_V2_EIBRS:
-		case SPECTRE_V2_EIBRS_RETPOLINE:
-		case SPECTRE_V2_EIBRS_LFENCE:
-			retbleed_mitigation = RETBLEED_MITIGATION_EIBRS;
-			break;
-		default:
-			pr_err(RETBLEED_INTEL_MSG);
-		}
-	}
-
-	pr_info("%s\n", retbleed_strings[retbleed_mitigation]);
-}
-
-#undef pr_fmt
-#define pr_fmt(fmt)     "Spectre V2 : " fmt
-
-static enum spectre_v2_user_mitigation spectre_v2_user_stibp __ro_after_init =
-	SPECTRE_V2_USER_NONE;
-static enum spectre_v2_user_mitigation spectre_v2_user_ibpb __ro_after_init =
+static enum spectre_v2_user_mitigation spectre_v2_user __ro_after_init =
 	SPECTRE_V2_USER_NONE;
 
 #ifdef CONFIG_RETPOLINE
@@ -1042,28 +948,21 @@ spectre_v2_user_select_mitigation(void)
 			"always-on" : "conditional");
 	}
 
-	/*
-	 * If no STIBP, IBRS or enhanced IBRS is enabled, or SMT impossible,
-	 * STIBP is not required.
-	 */
-	if (!boot_cpu_has(X86_FEATURE_STIBP) ||
-	    !smt_possible ||
-	    spectre_v2_in_ibrs_mode(spectre_v2_enabled))
+	/* If enhanced IBRS is enabled no STIPB required */
+	if (spectre_v2_enabled == SPECTRE_V2_IBRS_ENHANCED)
 		return;
 
 	/*
-	 * At this point, an STIBP mode other than "off" has been set.
-	 * If STIBP support is not being forced, check if STIBP always-on
-	 * is preferred.
+	 * If SMT is not possible or STIBP is not available clear the STIPB
+	 * mode.
 	 */
-	if (mode != SPECTRE_V2_USER_STRICT &&
-	    boot_cpu_has(X86_FEATURE_AMD_STIBP_ALWAYS_ON))
-		mode = SPECTRE_V2_USER_STRICT_PREFERRED;
-
-	spectre_v2_user_stibp = mode;
-
+	if (!smt_possible || !boot_cpu_has(X86_FEATURE_STIBP))
+		mode = SPECTRE_V2_USER_NONE;
 set_mode:
-	pr_info("%s\n", spectre_v2_user_strings[mode]);
+	spectre_v2_user = mode;
+	/* Only print the STIBP mode when SMT possible */
+	if (smt_possible)
+		pr_info("%s\n", spectre_v2_user_strings[mode]);
 }
 
 static const char * const spectre_v2_strings[] = {
@@ -1489,11 +1388,7 @@ void arch_smt_update(void)
 {
 	mutex_lock(&spec_ctrl_mutex);
 
-	if (sched_smt_active() && unprivileged_ebpf_enabled() &&
-	    spectre_v2_enabled == SPECTRE_V2_EIBRS_LFENCE)
-		pr_warn_once(SPECTRE_V2_EIBRS_LFENCE_EBPF_SMT_MSG);
-
-	switch (spectre_v2_user_stibp) {
+	switch (spectre_v2_user) {
 	case SPECTRE_V2_USER_NONE:
 		break;
 	case SPECTRE_V2_USER_STRICT:
@@ -1734,8 +1629,7 @@ static int ib_prctl_set(struct task_struct *task, unsigned long ctrl)
 {
 	switch (ctrl) {
 	case PR_SPEC_ENABLE:
-		if (spectre_v2_user_ibpb == SPECTRE_V2_USER_NONE &&
-		    spectre_v2_user_stibp == SPECTRE_V2_USER_NONE)
+		if (spectre_v2_user == SPECTRE_V2_USER_NONE)
 			return 0;
 		/*
 		 * With strict mode for both IBPB and STIBP, the instruction
@@ -1752,8 +1646,7 @@ static int ib_prctl_set(struct task_struct *task, unsigned long ctrl)
 		 * spectre_v2_user_ibpb == SPECTRE_V2_USER_SECCOMP and
 		 * spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT_PREFERRED.
 		 */
-		if (!is_spec_ib_user_controlled() ||
-		    task_spec_ib_force_disable(task))
+		if (spectre_v2_user == SPECTRE_V2_USER_STRICT)
 			return -EPERM;
 
 		task_clear_spec_ib_disable(task);
@@ -1765,11 +1658,9 @@ static int ib_prctl_set(struct task_struct *task, unsigned long ctrl)
 		 * Indirect branch speculation is always allowed when
 		 * mitigation is force disabled.
 		 */
-		if (spectre_v2_user_ibpb == SPECTRE_V2_USER_NONE &&
-		    spectre_v2_user_stibp == SPECTRE_V2_USER_NONE)
+		if (spectre_v2_user == SPECTRE_V2_USER_NONE)
 			return -EPERM;
-
-		if (!is_spec_ib_user_controlled())
+		if (spectre_v2_user == SPECTRE_V2_USER_STRICT)
 			return 0;
 
 		task_set_spec_ib_disable(task);
@@ -1801,8 +1692,7 @@ void arch_seccomp_spec_mitigate(struct task_struct *task)
 {
 	if (ssb_mode == SPEC_STORE_BYPASS_SECCOMP)
 		ssb_prctl_set(task, PR_SPEC_FORCE_DISABLE);
-	if (spectre_v2_user_ibpb == SPECTRE_V2_USER_SECCOMP ||
-	    spectre_v2_user_stibp == SPECTRE_V2_USER_SECCOMP)
+	if (spectre_v2_user == SPECTRE_V2_USER_SECCOMP)
 		ib_prctl_set(task, PR_SPEC_FORCE_DISABLE);
 }
 #endif
@@ -1831,21 +1721,21 @@ static int ib_prctl_get(struct task_struct *task)
 	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V2))
 		return PR_SPEC_NOT_AFFECTED;
 
-	if (spectre_v2_user_ibpb == SPECTRE_V2_USER_NONE &&
-	    spectre_v2_user_stibp == SPECTRE_V2_USER_NONE)
+	switch (spectre_v2_user) {
+	case SPECTRE_V2_USER_NONE:
 		return PR_SPEC_ENABLE;
-	else if (is_spec_ib_user_controlled()) {
+	case SPECTRE_V2_USER_PRCTL:
+	case SPECTRE_V2_USER_SECCOMP:
 		if (task_spec_ib_force_disable(task))
 			return PR_SPEC_PRCTL | PR_SPEC_FORCE_DISABLE;
 		if (task_spec_ib_disable(task))
 			return PR_SPEC_PRCTL | PR_SPEC_DISABLE;
 		return PR_SPEC_PRCTL | PR_SPEC_ENABLE;
-	} else if (spectre_v2_user_ibpb == SPECTRE_V2_USER_STRICT ||
-	    spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT ||
-	    spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT_PREFERRED)
+	case SPECTRE_V2_USER_STRICT:
 		return PR_SPEC_DISABLE;
-	else
+	default:
 		return PR_SPEC_NOT_AFFECTED;
+	}
 }
 
 int arch_prctl_spec_ctrl_get(struct task_struct *task, unsigned long which)
@@ -2101,7 +1991,7 @@ static char *stibp_state(void)
 	if (spectre_v2_in_ibrs_mode(spectre_v2_enabled))
 		return "";
 
-	switch (spectre_v2_user_stibp) {
+	switch (spectre_v2_user) {
 	case SPECTRE_V2_USER_NONE:
 		return ", STIBP: disabled";
 	case SPECTRE_V2_USER_STRICT:

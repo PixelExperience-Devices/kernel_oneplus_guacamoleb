@@ -15,10 +15,6 @@
 #include <linux/swap.h>
 #include <linux/kthread.h>
 
-#if defined(VENDOR_EDIT) && defined(CONFIG_UFSTW)
-#include <linux/ufstw.h>
-#endif
-
 #include "f2fs.h"
 #include "node.h"
 #include "segment.h"

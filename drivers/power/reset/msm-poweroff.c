@@ -55,9 +55,6 @@
 #define SCM_DLOAD_MINIDUMP		0X20
 #define SCM_DLOAD_BOTHDUMPS	(SCM_DLOAD_MINIDUMP | SCM_DLOAD_FULLDUMP)
 
-/* if open fulldump disable the pmic watchdog */
-void oplus_set_pmicWd_state(int enable);
-
 static int restart_mode;
 static void *restart_reason;
 static bool scm_pmic_arbiter_disable_supported;
@@ -102,13 +99,6 @@ static void *emergency_dload_mode_addr;
 static void __iomem *kaslr_imem_addr;
 #endif
 static bool scm_dload_supported;
-#ifdef CONFIG_OPLUS_FEATURE_PANIC_FLUSH
-int get_download_mode(void)
-{
-	return download_mode && (dload_type & SCM_DLOAD_FULLDUMP);
-}
-EXPORT_SYMBOL(get_download_mode);
-#endif
 
 static int dload_set(const char *val, const struct kernel_param *kp);
 /* interface for exporting attributes */
@@ -688,9 +678,6 @@ static size_t store_dload_mode(struct kobject *kobj, struct attribute *attr,
 		pr_err("Supported dumps:'full', 'mini', or 'both'\n");
 		return -EINVAL;
 	}
-
-	if(dload_type == SCM_DLOAD_FULLDUMP)
-		oplus_set_pmicWd_state(0);
 
 	mutex_lock(&tcsr_lock);
 	/*Overwrite TCSR reg*/

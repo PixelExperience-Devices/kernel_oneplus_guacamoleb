@@ -29,7 +29,6 @@
 #include <net/netfilter/nf_conntrack_tuple.h>
 
 #define SIP_LIST_ELEMENTS	2
-#define OPLUS_FEATURE_WIFI_LUCKYMONEY
 
 struct sip_length {
 	int msg_length[SIP_LIST_ELEMENTS];
@@ -96,10 +95,6 @@ struct nf_conn {
 #endif
 	/* all members below initialized via memset */
 	struct { } __nfct_init_offset;
-
-#ifdef OPLUS_FEATURE_WIFI_LUCKYMONEY
-	u32 oplus_app_uid;
-	#endif /* OPLUS_FEATURE_WIFI_LUCKYMONEY */
 
 	/* If we were expected by an expectation, this will be it */
 	struct nf_conn *master;
