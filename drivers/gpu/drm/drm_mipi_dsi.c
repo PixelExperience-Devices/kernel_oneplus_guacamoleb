@@ -1097,8 +1097,8 @@ int mipi_dsi_dcs_get_display_brightness(struct mipi_dsi_device *dsi,
 EXPORT_SYMBOL(mipi_dsi_dcs_get_display_brightness);
 
 /**
- * mipi_dsi_dcs_set_display_brightness_samsung() - sets the brightness value of the
- *    display
+ * mipi_dsi_dcs_set_display_brightness_large() - sets the 16-bit brightness value
+ *    of the display
  * @dsi: DSI peripheral device
  * @brightness: brightness value
  *
